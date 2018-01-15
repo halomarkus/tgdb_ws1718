@@ -1,156 +1,66 @@
-# Tutorium - Grundlagen Datenbanken - Blatt 13
+A1)select * from artikel where INITCAP(bezeichnung) AND length(bezeichnung)=4;
+ALTER TABLE artikel
+ADD CONSTRAINT u_gas_name
+CHECK (REGEXP_LIKE(bezeichnung, '^[A-Z](1,4).*$', 'c'));
 
-## Vorbereitungen
-* Für dieses Aufgabenblatt wird die SQL-Dump-Datei `schema_uebung_13.sql` benötigt, die sich im Verzeichnis `sql` befindet.
-* Die SQL-Dump-Datei wird in SQL-Plus mittels `start <Dateipfad/zur/sql-dump-datei.sql>` in die Datenbank importiert.
-* Beispiele
-  * Linux `start ~/Tutorium.sql`
-  * Windows `start C:\Users\max.mustermann\Desktop\Tutorium.sql`
 
-## Datenbankmodell
-Gegeben sei folgender Situation:
-+ Ein Kunde kann eine oder mehrere Bestellungen aufgeben
-+ In einer Bestellung wird wenigstens ein eventuell mehrere Artikel (in einer gewissen Menge) bestellt.
-+ Eine Lieferung kann sich auch auf mehrere Bestellpositionen des gleichen Kunden beziehen.
-+ Eine Bestellposition muss nicht gleich von Anfang an mit einer Lieferung verknüpft werden (also der Artikel nicht gleich ausgeliefert werden).
+A2)select artikelnr from artikel;
+ALTER TABLE artikel
+ADD CONSTRAINT u_gas_name
+CHECK (REGEXP_LIKE(artikelnr, '^[1](1):[0-3,5-9](1,2).*$', 'c'));
 
-Folgendes relationale Schema soll diesen Realitätsausschnitt abbilden:
+A3)select p.name, count(b.bestellnr)
+from person p
+LEFT JOIN bestellung b ON p.pnr=b.pnr;
 
-![Databasemodell](./img/schema_uebung_13.png)
+A4)CREATE TABLE Bestellposition(
+bestellnr INTEGER NOT NULL,
+artikelnr INTEGER NOT NULL,
+lieferungsnr INTEGER,
+menege);
 
-## Aufgaben
-Führe das in Abschnitt Vorbereitung genannte Skript aus. Die untenstehenden Aufgaben beziehen sich auf das oben dargestellte relationale Schema.
+A5)ALTER TABLE Bestellung ADD CONSTRAINT c_test CHECK(bestellnr>0);
 
-### Aufgabe 1
-Gebe mit einem regulären Ausdruck alle Artikel aus, die mit einem Großbuchstaben beginnen und mindestens 4 Zeichen lang sind.
+A6)ALTER TABLE BESTELLposition ADD CONSTRAINT c_PK PRIMARY KEY(bestellnr,artikelnr);
 
-#### Lösung
-```sql
-Deine Lösung
-```
+ALTER TABLE BESTELLposition ADD CONSTRAINT FK_BEST_LIEF FOREIGN KEY(lieferungsnr) REFERENCES lieferung(lieferungsnr);
+ALTER TABLE Bestellposition ADD CONSTRAINT FK_artikel FOREIGN KEY(artikelnr) REFERENCES artikel(artikelnr);
+ALTER TABLE BESTELLPOSITION ADD CONSTRAINT FK_bestellung FOREIGN KEY(bestellnr) REFERENCES bestellung(bestellnr);
 
-### Aufgabe 2
-Gebe mit einem regulären Ausdruck alle Artikelnummern aus, die aus 3 Ziffern bestehen, mit 1 beginnen und anschließend keine 4 folgt.
+A7)
+start <Dateipfad/zur/sql-dump-datei.sql>
 
-#### Lösung
-```sql
-Deine Lösung
-```
+A8)CREATE SEQUENCE Person_SEQ
+START WITH 1000;
 
-### Aufgabe 3
-Gebe alle Kunden mit der Anzahl ihrer Bestellungen aus. Hier sollen auch Kunden zurückgegeben werden, die bisher keine Bestellungen getätigt haben.
+CREATE OR REPLACE TRIGGER trig_BIU
+BEFORE INSERT OR UPDATE ON PERSON
+FOR EACH
+IF(INSERTING)THEN
+:NEW.PNR:=PERSON_SEQ.NEXTVAL;
+END IF;
 
-#### Lösung
-```sql
-Deine Lösung
-```
+IF(UPDATING(PNR))THEN
+DBMS_OUTPUT.PUT_LINE('NICHT MÖGLICH');
+END IF;
+END;
+/
 
-### Aufgabe 4
-Ergänzen Sie das Skript um das `CREATE TABLE` statement für die Tabelle `BESTELLPOSITION` mit den notwendigen `NOT NULL` Constraints.
+A9)INSERT INTO BESTELLUNG VALUES('100',SYSDATE,(SELECT P.PNR FROM PERSON P WHERE NAME LIKE '%Mc%'));
 
-#### Lösung
-```sql
-Deine Lösung
-```
+A10)GRANT SElect,UPdate!=artikel * from artikel to SCOTT;
 
-### Aufgabe 5
-Stellen Sie sicher, dass eine Bestellnr immer größer null ist.
+A11)DELETE from person p WHERE datum<=sysdate-INTERVAL '1' YEAR;
 
-#### Lösung
-```sql
-Deine Lösung
-```
+A12)select name,geburtsdatum
+from person 
+ORDER BY name DESC,geburtsdatum ASC;
 
-### Aufgabe 6
-Ergänzen Sie das Skript um eine Definition eines geeigneten `PRIMARY KEY` für die Tabelle `Bestellposition` und der drei `FOREIGN KEY`s zu `LIEFERUNG`, `BESTELLUNG` und `ARTIKEL` mit den o.g. Namen.
+A13)UPDATE ARTIKEL
+SET preis =preis*1.05;
 
-#### Lösung
-```sql
-Deine Lösung
-```
+A14)select * from bestellung where lieferungsnr not exists( select lieferungsnr from bestellposition);
 
-### Aufgabe 7
-Starten Sie das so veränderte Skript.
+A15)select name from person where geburtsdatum>=sysdate-INTERVAL '18' YEAR;
 
-#### Lösung
-```sql
-Deine Lösung
-```
-
-### Aufgabe 8
-Stellen Sie sicher, dass jede Person, die neu in den Bestand aufgenommen wird eine pnr aus einer Sequence erhält und dass eine `PNR` später nicht mehr durch einen `UPDATE` verändert werden darf. Die Sequence soll `PERSON_SEQ` heißen und bei `1000` beginnen.
-
-#### Lösung
-```sql
-Deine Lösung
-```
-
-### Aufgabe 9
-Erfassen Sie eine Bestellung, mit Bestellnr 100, dem Datum von heute und ordnen Sie es dem Kunden Hugo McKinnock zu.
-
-Dieser Kunde bestellt den Artikel SAP for beginners mit der Artikelnummer `123` und dem Verkaufspreis 25 Euro zwei mal. Zusätzlich bestellt der Kunde den Artikel JAVA for dummies mit der Artikelnummer `234` ein mal.
-
-Löse die Aufgabe möglichst mit dynamischem SQL - subqueries.
-
-#### Lösung
-```sql
-Deine Lösung
-```
-
-### Aufgabe 10
-Räumen Sie dem DB-Benutzer `SCOTT` das Recht ein, `UPDATE` (nicht auf `ARTIKELNR`) und `SELECT` auf der Tabelle `ARTIKEL` durchführen zu können.
-
-#### Lösung
-```sql
-Deine Lösung
-```
-
-### Aufgabe 11
-Löschen Sie alle Personen, deren letzte Bestellung vom heutigen Tag aus gesehen mehr als ein Jahr zurückliegt.
-
-Vorsicht: Der Kunde könnte mehrere Bestellungen aufgegeben haben oder auch gar keine.
-
-#### Lösung
-```sql
-Deine Lösung
-```
-
-### Aufgabe 12
-Geben Sie die Personen aus absteigend sortiert nach Namen und innerhalb des gleichen Namens aufsteigend nach Geburtsdatum.
-
-#### Lösung
-```sql
-Deine Lösung
-```
-
-### Aufgabe 13
-Erhöhen Sie den Preis jeden Artikels um 5%.
-
-#### Lösung
-```sql
-Deine Lösung
-```
-
-### Aufgabe 14
-Für welche der Bestellungen ist noch keine Lieferung erfolgt?
-
-#### Lösung
-```sql
-Deine Lösung
-```
-
-### Aufgabe 15
-Geben Sie die Personen aus, die mindestens 18 Jahre alt sind.
-
-#### Lösung
-```sql
-Deine Lösung
-```
-
-### Aufgabe 16
-Geben Sie alle Personen aus, deren Namen zwischen fünf und zehn Zeichen lang sind und einen Bindestrich (-) enthalten.
-
-#### Lösung
-```sql
-Deine Lösung
-```
+A16)select name from person where lenght(name)>=5AND length(name)<=10 AND name LIKE '%-%';
